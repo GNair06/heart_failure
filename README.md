@@ -1,6 +1,6 @@
 # Heart Failure Prediction System
 
-A full-stack web application that predicts heart failure risk from clinical data. Built with Flask, SQLAlchemy, and scikit-learn, featuring three role-based dashboards for patients, doctors, and administrators.
+A full-stack machine learning web application that predicts heart failure risk from clinical data. Built with Flask, SQLAlchemy, and scikit-learn, featuring three role-based dashboards for patients, doctors, and administrators.
 
 ---
 
