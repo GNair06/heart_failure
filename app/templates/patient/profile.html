@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Patient Menu</span>
+<a href="{{ url_for('patient.dashboard') }}" class="nav-item">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('patient.predict') }}" class="nav-item">
+  <span class="nav-icon"></span> New Prediction
+</a>
+<a href="{{ url_for('patient.profile') }}" class="nav-item active">
+  <span class="nav-icon"></span> My Profile
+</a>
+{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+{% block page_subtitle %}Account details and health summary{% endblock %}
+
+{% block content %}
+<div style="max-width:720px; margin:0 auto;">
+  <div class="profile-header">
+    <div class="profile-avatar">{{ current_user.username[0].upper() }}</div>
+    <div>
+      <div class="profile-name">{{ current_user.username }}</div>
+      <div class="profile-meta">{{ current_user.email }}</div>
+      <div class="profile-meta">Member since {{ current_user.created_at.strftime('%B %Y') }}</div>
+      <div style="margin-top:8px;"><span class="badge badge-patient">Patient</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><div class="card-title">Health Summary</div></div>
+    <div class="card-body">
+      <div class="stats-grid" style="margin-bottom:0;">
+        <div class="stat-card">
+          <div class="stat-icon icon-blue"></div>
+          <div class="stat-value">{{ predictions | length }}</div>
+          <div class="stat-label">Total Predictions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-red"></div>
+          <div class="stat-value">{{ predictions | selectattr('risk_level', 'equalto', 'High') | list | length }}</div>
+          <div class="stat-label">High Risk Results</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-orange"></div>
+          <div class="stat-value">{{ predictions | selectattr('risk_level', 'equalto', 'Medium') | list | length }}</div>
+          <div class="stat-label">Medium Risk Results</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-green"></div>
+          <div class="stat-value">{{ predictions | selectattr('risk_level', 'equalto', 'Low') | list | length }}</div>
+          <div class="stat-label">Low Risk Results</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><div class="card-title">My Doctors</div></div>
+    <div class="card-body" style="padding:0;">
+      {% if doctors %}
+      <table>
+        <thead>
+          <tr><th>Doctor</th><th>Email</th><th>Assigned On</th></tr>
+        </thead>
+        <tbody>
+          {% for assignment in doctors %}
+          <tr>
+            <td><strong>Dr. {{ assignment.doctor.username }}</strong></td>
+            <td style="color:var(--text-muted);">{{ assignment.doctor.email }}</td>
+            <td style="color:var(--text-muted);">{{ assignment.assigned_at.strftime('%b %d, %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon"></div><h3>No doctor assigned</h3><p>Contact the admin to get assigned to a doctor.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

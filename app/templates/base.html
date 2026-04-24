@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}HeartCare{% endblock %} — HeartCare</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="#" class="sidebar-logo">
+        <div class="logo-icon"></div>
+        <div>
+          <div class="logo-text">HeartCare</div>
+          <div class="logo-sub">AI Prediction System</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar avatar-{{ current_user.role }}">
+        {{ current_user.username[0].upper() }}
+      </div>
+      <div class="user-info">
+        <div class="user-name">{{ current_user.username }}</div>
+        <div class="user-role">{{ current_user.role }}</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% block sidebar_nav %}{% endblock %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('auth.logout') }}" class="btn-logout">
+        <span></span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-subtitle">{% block page_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{% if category == 'success' %}{% elif category == 'danger' %}{% elif category == 'warning' %}{% else %}ℹ{% endif %}</span>
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script>
+  // Mobile sidebar toggle
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    document.querySelectorAll('.sidebar-toggle').forEach(btn => {
+      btn.addEventListener('click', () => sidebar.classList.toggle('open'));
+    });
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Admin Menu</span>
+<a href="{{ url_for('admin.dashboard') }}" class="nav-item">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('admin.users') }}" class="nav-item active">
+  <span class="nav-icon"></span> Manage Users
+</a>
+{% endblock %}
+
+{% block page_title %}Manage Users{% endblock %}
+{% block page_subtitle %}Assign doctors, change roles, and manage accounts{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary btn-sm" onclick="document.getElementById('createUserModal').classList.add('active')">
+  + Create User
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Create User Modal -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create New User</div>
+      <button class="modal-close" onclick="document.getElementById('createUserModal').classList.remove('active')">X</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.create_user') }}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-control" type="text" name="username" placeholder="johndoe" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-control" name="role">
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" name="email" placeholder="user@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" name="password" placeholder="min. 6 characters" required/>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <button type="button" class="btn btn-outline"
+                onclick="document.getElementById('createUserModal').classList.remove('active')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">All Users ({{ users | length }})</div>
+      <div class="card-subtitle">Patient assignments and role management</div>
+    </div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Joined</th>
+            <th>Assign Doctor</th>
+            <th>Change Role</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="user-avatar avatar-{{ user.role }}" style="width:34px;height:34px;font-size:.85rem;">
+                  {{ user.username[0].upper() }}
+                </div>
+                <div>
+                  <div style="font-weight:700;">{{ user.username }}</div>
+                  <div style="font-size:.78rem; color:var(--text-muted);">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+            <td style="color:var(--text-muted); font-size:.82rem;">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+
+            <!-- Assign Doctor (only for patients) -->
+            <td>
+              {% if user.role == 'patient' and user.id != current_user.id %}
+              <form method="POST" action="{{ url_for('admin.assign_doctor', user_id=user.id) }}"
+                    style="display:flex; gap:6px; align-items:center;">
+                <select name="doctor_id" class="form-control" style="padding:5px 8px; font-size:.8rem; min-width:130px;">
+                  <option value="">Select doctor...</option>
+                  {% for doc in doctors %}
+                  <option value="{{ doc.id }}">Dr. {{ doc.username }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-success btn-sm">Assign</button>
+              </form>
+              {% else %}
+              <span style="color:var(--text-muted); font-size:.8rem;">—</span>
+              {% endif %}
+            </td>
+
+            <!-- Change Role -->
+            <td>
+              {% if user.id != current_user.id %}
+              <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}"
+                    style="display:flex; gap:6px; align-items:center;">
+                <select name="role" class="form-control" style="padding:5px 8px; font-size:.8rem; min-width:100px;">
+                  <option value="patient" {% if user.role == 'patient' %}selected{% endif %}>Patient</option>
+                  <option value="doctor"  {% if user.role == 'doctor'  %}selected{% endif %}>Doctor</option>
+                  <option value="admin"   {% if user.role == 'admin'   %}selected{% endif %}>Admin</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm">Save</button>
+              </form>
+              {% else %}
+              <span style="color:var(--text-muted); font-size:.8rem;">You</span>
+              {% endif %}
+            </td>
+
+            <!-- Delete -->
+            <td>
+              {% if user.id != current_user.id %}
+              <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                    onsubmit="return confirm('Delete {{ user.username }}? This cannot be undone.');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+              {% else %}
+              <span style="color:var(--text-muted); font-size:.8rem;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

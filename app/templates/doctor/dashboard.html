@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Doctor Menu</span>
+<a href="{{ url_for('doctor.dashboard') }}" class="nav-item active">
+  <span class="nav-icon"></span> Dashboard
+</a>
+{% endblock %}
+
+{% block page_title %}Doctor Dashboard{% endblock %}
+{% block page_subtitle %}Manage your patients and review predictions{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"></div>
+    <div class="stat-value">{{ total_patients }}</div>
+    <div class="stat-label">Total Patients</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"></div>
+    <div class="stat-value">{{ total_predictions }}</div>
+    <div class="stat-label">Total Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"></div>
+    <div class="stat-value">{{ high_risk }}</div>
+    <div class="stat-label">High Risk Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"></div>
+    <div class="stat-value">{{ pending_review }}</div>
+    <div class="stat-label">Pending Review</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Patient Risk Distribution</div>
+        <div class="card-subtitle">Risk levels across all patients</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;"><canvas id="riskPieChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Prediction Activity</div>
+        <div class="card-subtitle">Monthly prediction submissions</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;"><canvas id="trendBarChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Risk Overview -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Patient Risk Overview</div>
+      <div class="card-subtitle">Latest risk assessment per patient</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="chart-container" style="height:{{ [patient_overview|length * 50 + 60, 260]|max }}px;">
+      <canvas id="patientRiskChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Table -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title">My Patients</div>
+      <div class="card-subtitle">Click a patient to view full history</div>
+    </div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if patient_overview %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Email</th>
+            <th>Latest Risk</th>
+            <th>Probability</th>
+            <th>Last Assessment</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in patient_overview %}
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="user-avatar avatar-patient" style="width:32px;height:32px;font-size:.8rem;">
+                  {{ item.user.username[0].upper() }}
+                </div>
+                <strong>{{ item.user.username }}</strong>
+              </div>
+            </td>
+            <td style="color:var(--text-muted);">{{ item.user.email }}</td>
+            <td>
+              {% if item.latest %}
+                <span class="badge badge-{{ item.latest.risk_level | lower }}">{{ item.latest.risk_level }}</span>
+              {% else %}
+                <span style="color:var(--text-muted); font-size:.82rem;">No data</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.latest %}
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="flex:1; max-width:70px;">
+                    <div class="risk-bar-bg" style="height:6px;">
+                      <div class="risk-bar risk-{{ item.latest.risk_level | lower }}"
+                           style="width:{{ (item.latest.probability*100)|round(1) }}%"></div>
+                    </div>
+                  </div>
+                  <span style="font-size:.82rem;">{{ (item.latest.probability*100)|round(1) }}%</span>
+                </div>
+              {% else %}—{% endif %}
+            </td>
+            <td style="color:var(--text-muted); font-size:.82rem;">
+              {% if item.latest %}{{ item.latest.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('doctor.patient_detail', patient_id=item.user.id) }}"
+                 class="btn btn-outline btn-sm">View →</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon"></div>
+      <h3>No patients assigned yet</h3>
+      <p>Ask the administrator to assign patients to you.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent Predictions -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Recent Predictions</div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if recent_predictions %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Patient</th><th>Date</th><th>Risk</th><th>Probability</th><th>Reviewed</th></tr>
+        </thead>
+        <tbody>
+          {% for pred in recent_predictions %}
+          <tr>
+            <td><strong>{{ pred.patient.username }}</strong></td>
+            <td style="color:var(--text-muted); font-size:.82rem;">{{ pred.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+            <td><span class="badge badge-{{ pred.risk_level | lower }}">{{ pred.risk_level }}</span></td>
+            <td>{{ (pred.probability*100)|round(1) }}%</td>
+            <td>
+              {% if pred.doctor_notes %}
+                <span class="badge badge-success"> Reviewed</span>
+              {% else %}
+                <span class="badge" style="background:rgba(113,128,150,.1); color:#718096;">Pending</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"></div><h3>No predictions yet</h3></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  const res = await fetch('{{ url_for("doctor.stats_json") }}');
+  const data = await res.json();
+
+  // Risk Pie
+  const rCtx = document.getElementById('riskPieChart');
+  if (rCtx) {
+    const rc = data.risk_counts;
+    new Chart(rCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Low', 'Medium', 'High'],
+        datasets: [{ data: [rc.Low||0, rc.Medium||0, rc.High||0], backgroundColor: ['#48bb78','#ed8936','#e53e3e'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+    });
+  }
+
+  // Trend Bar
+  const tCtx = document.getElementById('trendBarChart');
+  if (tCtx && data.prediction_trend.length) {
+    new Chart(tCtx, {
+      type: 'bar',
+      data: {
+        labels: data.prediction_trend.map(d => d.month),
+        datasets: [{ label: 'Predictions', data: data.prediction_trend.map(d => d.count), backgroundColor: 'rgba(66,153,225,.7)', borderRadius: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+    });
+  }
+
+  // Patient Risk Horizontal Bar
+  const prCtx = document.getElementById('patientRiskChart');
+  if (prCtx && data.patient_risk.length) {
+    new Chart(prCtx, {
+      type: 'bar',
+      data: {
+        labels: data.patient_risk.map(d => d.name),
+        datasets: [{
+          label: 'Risk Probability (%)',
+          data: data.patient_risk.map(d => (d.prob * 100).toFixed(1)),
+          backgroundColor: data.patient_risk.map(d =>
+            d.risk === 'High' ? 'rgba(229,62,62,.75)' :
+            d.risk === 'Medium' ? 'rgba(237,137,54,.75)' : 'rgba(72,187,120,.75)'
+          ),
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

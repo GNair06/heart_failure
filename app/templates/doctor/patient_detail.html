@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient — {{ patient.username }}{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Doctor Menu</span>
+<a href="{{ url_for('doctor.dashboard') }}" class="nav-item">
+  <span class="nav-icon"></span> Dashboard
+</a>
+{% endblock %}
+
+{% block page_title %}{{ patient.username }}{% endblock %}
+{% block page_subtitle %}Patient detail view{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('doctor.dashboard') }}" class="btn btn-outline btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:960px; margin:0 auto;">
+
+  <!-- Patient Header -->
+  <div class="profile-header" style="margin-bottom:24px;">
+    <div class="profile-avatar">{{ patient.username[0].upper() }}</div>
+    <div>
+      <div class="profile-name">{{ patient.username }}</div>
+      <div class="profile-meta">{{ patient.email }}</div>
+      <div class="profile-meta">Patient since {{ patient.created_at.strftime('%B %Y') }}</div>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="badge badge-patient">Patient</span>
+        {% if predictions %}
+          <span class="badge badge-{{ predictions[0].risk_level | lower }}">Latest: {{ predictions[0].risk_level }} Risk</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" style="margin-bottom:24px;">
+    <div class="stat-card">
+      <div class="stat-icon icon-blue"></div>
+      <div class="stat-value">{{ predictions | length }}</div>
+      <div class="stat-label">Total Predictions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-red"></div>
+      <div class="stat-value">{{ predictions | selectattr('risk_level', 'equalto', 'High') | list | length }}</div>
+      <div class="stat-label">High Risk</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-green"></div>
+      <div class="stat-value">{{ predictions | selectattr('result', 'equalto', 0) | list | length }}</div>
+      <div class="stat-label">No Risk</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-purple"></div>
+      <div class="stat-value">{{ predictions | selectattr('doctor_notes', 'ne', None) | list | length }}</div>
+      <div class="stat-label">Notes Added</div>
+    </div>
+  </div>
+
+  <!-- Prediction List with Note Modal -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Prediction History</div>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if predictions %}
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Age</th>
+              <th>EF%</th>
+              <th>Ser.Creat.</th>
+              <th>Risk</th>
+              <th>Probability</th>
+              <th>Result</th>
+              <th>Doctor Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pred in predictions %}
+            <tr>
+              <td style="font-size:.82rem; color:var(--text-muted);">{{ pred.created_at.strftime('%b %d, %Y') }}</td>
+              <td>{{ pred.age | int }}</td>
+              <td>{{ pred.ejection_fraction }}%</td>
+              <td>{{ pred.serum_creatinine }}</td>
+              <td><span class="badge badge-{{ pred.risk_level | lower }}">{{ pred.risk_level }}</span></td>
+              <td>{{ (pred.probability*100)|round(1) }}%</td>
+              <td>
+                {% if pred.result == 1 %}
+                  <span class="badge badge-danger">At Risk</span>
+                {% else %}
+                  <span class="badge badge-success">Stable</span>
+                {% endif %}
+              </td>
+              <td style="max-width:200px; font-size:.82rem;">
+                {% if pred.doctor_notes %}
+                  <span style="color:var(--text-muted);">{{ pred.doctor_notes[:60] }}{% if pred.doctor_notes|length > 60 %}...{% endif %}</span>
+                {% else %}
+                  <span style="color:#a0aec0;">No note yet</span>
+                {% endif %}
+              </td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="openNoteModal({{ pred.id }}, {{ patient.id }}, '{{ pred.doctor_notes or '' | e }}')">
+                  {% if pred.doctor_notes %}Edit Note{% else %}Add Note{% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"></div>
+        <h3>No predictions yet</h3>
+        <p>The patient has not submitted any health data yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add / Edit Doctor Note</div>
+      <button class="modal-close" onclick="closeNoteModal()">X</button>
+    </div>
+    <form method="POST" id="noteForm">
+      <div class="form-group">
+        <label class="form-label">Note for patient</label>
+        <textarea class="form-control" name="note" id="noteText" rows="5"
+                  placeholder="Enter your clinical observations or recommendations..."
+                  style="resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">Save Note</button>
+        <button type="button" class="btn btn-outline" onclick="closeNoteModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openNoteModal(predId, patientId, existingNote) {
+  document.getElementById('noteForm').action = `/doctor/patient/${patientId}/note/${predId}`;
+  document.getElementById('noteText').value = existingNote;
+  document.getElementById('noteModal').classList.add('active');
+}
+function closeNoteModal() {
+  document.getElementById('noteModal').classList.remove('active');
+}
+document.getElementById('noteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeNoteModal();
+});
+</script>
+{% endblock %}

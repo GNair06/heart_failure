@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}New Prediction{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Patient Menu</span>
+<a href="{{ url_for('patient.dashboard') }}" class="nav-item">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('patient.predict') }}" class="nav-item active">
+  <span class="nav-icon"></span> New Prediction
+</a>
+<a href="{{ url_for('patient.profile') }}" class="nav-item">
+  <span class="nav-icon"></span> My Profile
+</a>
+{% endblock %}
+
+{% block page_title %}New Prediction{% endblock %}
+{% block page_subtitle %}Enter your clinical data to get a heart failure risk assessment{% endblock %}
+
+{% block content %}
+<div style="max-width:860px; margin:0 auto;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Clinical Data Entry</div>
+        <div class="card-subtitle">Fill in all 12 clinical parameters accurately</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('patient.predict') }}">
+
+        <div style="margin-bottom:24px; padding:14px; background:rgba(66,153,225,.07); border:1px solid rgba(66,153,225,.2); border-radius:8px; font-size:.85rem;">
+          ℹ All values should reflect your <strong>current</strong> clinical measurements. Consult your doctor for accurate readings.
+        </div>
+
+        <!-- Row 1 -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="age">Age (years)</label>
+            <input class="form-control" type="number" id="age" name="age"
+                   min="1" max="120" step="1" placeholder="e.g. 65" required/>
+            <div class="form-hint">Patient's age in years</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="sex">Biological Sex</label>
+            <select class="form-control" id="sex" name="sex" required>
+              <option value="">Select...</option>
+              <option value="1">Male</option>
+              <option value="0">Female</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="ejection_fraction">Ejection Fraction (%)</label>
+            <input class="form-control" type="number" id="ejection_fraction"
+                   name="ejection_fraction" min="1" max="100" step="1"
+                   placeholder="e.g. 38" required/>
+            <div class="form-hint">Percentage of blood leaving the heart each beat (normal: 55–70%)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="serum_creatinine">Serum Creatinine (mg/dL)</label>
+            <input class="form-control" type="number" id="serum_creatinine"
+                   name="serum_creatinine" min="0.1" max="20" step="0.1"
+                   placeholder="e.g. 1.1" required/>
+            <div class="form-hint">Level of creatinine in blood (normal: 0.6–1.2)</div>
+          </div>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="serum_sodium">Serum Sodium (mEq/L)</label>
+            <input class="form-control" type="number" id="serum_sodium"
+                   name="serum_sodium" min="100" max="160" step="1"
+                   placeholder="e.g. 137" required/>
+            <div class="form-hint">Level of sodium in blood (normal: 135–145)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="platelets">Platelets (kiloplatelets/mL)</label>
+            <input class="form-control" type="number" id="platelets"
+                   name="platelets" min="10000" max="900000" step="1000"
+                   placeholder="e.g. 265000" required/>
+            <div class="form-hint">Platelet count (normal: 150,000–400,000)</div>
+          </div>
+        </div>
+
+        <!-- Row 4 -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="creatinine_phosphokinase">CPK Enzyme (mcg/L)</label>
+            <input class="form-control" type="number" id="creatinine_phosphokinase"
+                   name="creatinine_phosphokinase" min="1" max="10000" step="1"
+                   placeholder="e.g. 582" required/>
+            <div class="form-hint">Creatinine phosphokinase level (normal: 10–120)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="time">Follow-up Period (days)</label>
+            <input class="form-control" type="number" id="time"
+                   name="time" min="1" max="1000" step="1"
+                   placeholder="e.g. 100" required/>
+            <div class="form-hint">Days since the clinical event or diagnosis</div>
+          </div>
+        </div>
+
+        <!-- Boolean fields -->
+        <div class="divider"></div>
+        <div style="font-size:.85rem; font-weight:700; margin-bottom:16px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;">
+          Medical Conditions
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:12px; margin-bottom:24px;">
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all .2s;" id="lbl-anaemia">
+            <input type="checkbox" name="anaemia" id="anaemia" value="1" style="width:18px;height:18px;" onchange="updateLabel(this,'lbl-anaemia')"/>
+            <div>
+              <div style="font-size:.88rem; font-weight:700;">Anaemia</div>
+              <div style="font-size:.75rem; color:var(--text-muted);">Decrease in red blood cells</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all .2s;" id="lbl-diabetes">
+            <input type="checkbox" name="diabetes" id="diabetes" value="1" style="width:18px;height:18px;" onchange="updateLabel(this,'lbl-diabetes')"/>
+            <div>
+              <div style="font-size:.88rem; font-weight:700;">Diabetes</div>
+              <div style="font-size:.75rem; color:var(--text-muted);">Has diabetes condition</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all .2s;" id="lbl-hbp">
+            <input type="checkbox" name="high_blood_pressure" id="hbp" value="1" style="width:18px;height:18px;" onchange="updateLabel(this,'lbl-hbp')"/>
+            <div>
+              <div style="font-size:.88rem; font-weight:700;">High Blood Pressure</div>
+              <div style="font-size:.75rem; color:var(--text-muted);">Hypertension present</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all .2s;" id="lbl-smoking">
+            <input type="checkbox" name="smoking" id="smoking" value="1" style="width:18px;height:18px;" onchange="updateLabel(this,'lbl-smoking')"/>
+            <div>
+              <div style="font-size:.88rem; font-weight:700;">Smoking</div>
+              <div style="font-size:.75rem; color:var(--text-muted);">Current or past smoker</div>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- Hidden fields for unchecked checkboxes -->
+        <script>
+          function updateLabel(checkbox, labelId) {
+            const lbl = document.getElementById(labelId);
+            lbl.style.borderColor = checkbox.checked ? 'var(--primary)' : 'var(--border)';
+            lbl.style.background = checkbox.checked ? 'rgba(229,62,62,.05)' : '';
+          }
+          // Ensure 0 is submitted when unchecked
+          document.querySelector('form').addEventListener('submit', function() {
+            ['anaemia','diabetes','high_blood_pressure','smoking'].forEach(name => {
+              const cb = document.querySelector(`input[name="${name}"]`);
+              if (!cb.checked) {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = name;
+                hidden.value = '0';
+                this.appendChild(hidden);
+              }
+            });
+          });
+        </script>
+
+        <div style="display:flex; gap:12px; margin-top:8px;">
+          <button type="submit" class="btn btn-primary" style="padding:12px 28px; font-size:.95rem;">
+             Run Prediction
+          </button>
+          <a href="{{ url_for('patient.dashboard') }}" class="btn btn-outline" style="padding:12px 20px;">
+            Cancel
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

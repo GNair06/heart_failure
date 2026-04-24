@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Admin Menu</span>
+<a href="{{ url_for('admin.dashboard') }}" class="nav-item active">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('admin.users') }}" class="nav-item">
+  <span class="nav-icon"></span> Manage Users
+</a>
+{% endblock %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block page_subtitle %}System overview and management{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin.users') }}" class="btn btn-primary btn-sm">Manage Users →</a>
+{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"></div>
+    <div class="stat-value">{{ total_users }}</div>
+    <div class="stat-label">Total Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"></div>
+    <div class="stat-value">{{ num_patients }}</div>
+    <div class="stat-label">Patients</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"></div>
+    <div class="stat-value">{{ num_doctors }}</div>
+    <div class="stat-label">Doctors</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"></div>
+    <div class="stat-value">{{ total_predictions }}</div>
+    <div class="stat-label">Total Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"></div>
+    <div class="stat-value">{{ high_risk }}</div>
+    <div class="stat-label">High Risk Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange"></div>
+    <div class="stat-value">{{ unassigned_patients | length }}</div>
+    <div class="stat-label">Unassigned Patients</div>
+  </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="charts-grid" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">User Role Distribution</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;"><canvas id="roleChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Prediction Risk Breakdown</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;"><canvas id="riskChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="charts-grid" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Prediction Trend</div>
+      <div class="card-subtitle">Monthly predictions across all patients</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:240px;"><canvas id="predTrendChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">User Registration Trend</div>
+      <div class="card-subtitle">Monthly new user signups</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:240px;"><canvas id="userTrendChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Unassigned Patients Alert -->
+{% if unassigned_patients %}
+<div class="alert alert-warning" style="margin-bottom:24px;">
+   <strong>{{ unassigned_patients | length }} patient(s)</strong> are not assigned to any doctor.
+  <a href="{{ url_for('admin.users') }}" style="color:inherit; font-weight:700; margin-left:8px;">Manage →</a>
+</div>
+{% endif %}
+
+<!-- Recent Activity -->
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Recent Users</div></div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>User</th><th>Role</th><th>Joined</th></tr></thead>
+        <tbody>
+          {% for user in recent_users %}
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="user-avatar avatar-{{ user.role }}" style="width:28px;height:28px;font-size:.75rem;">
+                  {{ user.username[0].upper() }}
+                </div>
+                <div>
+                  <div style="font-size:.88rem; font-weight:600;">{{ user.username }}</div>
+                  <div style="font-size:.75rem; color:var(--text-muted);">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+            <td style="color:var(--text-muted); font-size:.82rem;">{{ user.created_at.strftime('%b %d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">Recent Predictions</div></div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>Patient</th><th>Risk</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for pred in recent_predictions %}
+          <tr>
+            <td><strong>{{ pred.patient.username }}</strong></td>
+            <td><span class="badge badge-{{ pred.risk_level | lower }}">{{ pred.risk_level }}</span></td>
+            <td style="color:var(--text-muted); font-size:.82rem;">{{ pred.created_at.strftime('%b %d, %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  const res = await fetch('{{ url_for("admin.stats_json") }}');
+  const data = await res.json();
+
+  const palette = { patient: '#805ad5', doctor: '#4299e1', admin: '#ed8936' };
+
+  // Role Pie
+  const roleCtx = document.getElementById('roleChart');
+  if (roleCtx) {
+    const rc = data.role_counts;
+    new Chart(roleCtx, {
+      type: 'pie',
+      data: {
+        labels: ['Patients', 'Doctors', 'Admins'],
+        datasets: [{ data: [rc.patient, rc.doctor, rc.admin], backgroundColor: ['#805ad5','#4299e1','#ed8936'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  // Risk Doughnut
+  const riskCtx = document.getElementById('riskChart');
+  if (riskCtx) {
+    const rc = data.risk_counts;
+    new Chart(riskCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Low', 'Medium', 'High'],
+        datasets: [{ data: [rc.Low||0, rc.Medium||0, rc.High||0], backgroundColor: ['#48bb78','#ed8936','#e53e3e'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+    });
+  }
+
+  // Prediction Trend
+  const ptCtx = document.getElementById('predTrendChart');
+  if (ptCtx && data.prediction_trend.length) {
+    new Chart(ptCtx, {
+      type: 'line',
+      data: {
+        labels: data.prediction_trend.map(d => d.month),
+        datasets: [{ label: 'Predictions', data: data.prediction_trend.map(d => d.count), fill: true, borderColor: '#e53e3e', backgroundColor: 'rgba(229,62,62,.08)', tension: .4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+    });
+  }
+
+  // User Trend
+  const utCtx = document.getElementById('userTrendChart');
+  if (utCtx && data.user_trend.length) {
+    new Chart(utCtx, {
+      type: 'bar',
+      data: {
+        labels: data.user_trend.map(d => d.month),
+        datasets: [{ label: 'New Users', data: data.user_trend.map(d => d.count), backgroundColor: 'rgba(66,153,225,.7)', borderRadius: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+    });
+  }
+});
+</script>
+{% endblock %}

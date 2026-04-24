@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction Result{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Patient Menu</span>
+<a href="{{ url_for('patient.dashboard') }}" class="nav-item">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('patient.predict') }}" class="nav-item">
+  <span class="nav-icon"></span> New Prediction
+</a>
+<a href="{{ url_for('patient.profile') }}" class="nav-item">
+  <span class="nav-icon"></span> My Profile
+</a>
+{% endblock %}
+
+{% block page_title %}Prediction Result{% endblock %}
+{% block page_subtitle %}Assessment on {{ pred.created_at.strftime('%B %d, %Y') }}{% endblock %}
+
+{% block content %}
+<div style="max-width:860px; margin:0 auto;">
+
+  <!-- Result Hero -->
+  <div class="card" style="margin-bottom:24px; border-top:5px solid
+    {% if pred.risk_level == 'High' %}#e53e3e
+    {% elif pred.risk_level == 'Medium' %}#ed8936
+    {% else %}#48bb78{% endif %};">
+    <div class="card-body" style="text-align:center; padding:40px 32px;">
+      <div style="font-size:3.5rem; margin-bottom:12px;">
+        {% if pred.risk_level == 'High' %}
+        {% elif pred.risk_level == 'Medium' %}
+        {% else %}{% endif %}
+      </div>
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:8px;">
+        {% if pred.result == 1 %}
+          Risk of Heart Failure Detected
+        {% else %}
+          No Immediate Risk Detected
+        {% endif %}
+      </h2>
+      <div style="margin-bottom:24px;">
+        <span class="badge badge-{{ pred.risk_level | lower }}" style="font-size:.9rem; padding:6px 18px;">
+          {{ pred.risk_level }} Risk
+        </span>
+      </div>
+
+      <!-- Probability Meter -->
+      <div style="max-width:400px; margin:0 auto;">
+        <div style="display:flex; justify-content:space-between; font-size:.8rem; color:var(--text-muted); margin-bottom:6px;">
+          <span>0%</span>
+          <span style="font-weight:700; font-size:1rem; color:var(--text);">{{ (pred.probability * 100)|round(1) }}% probability</span>
+          <span>100%</span>
+        </div>
+        <div class="risk-bar-bg" style="height:16px; border-radius:10px;">
+          <div class="risk-bar risk-{{ pred.risk_level | lower }}"
+               style="width:{{ (pred.probability * 100)|round(1) }}%; height:100%; border-radius:10px;"></div>
+        </div>
+        <div style="font-size:.78rem; color:var(--text-muted); margin-top:8px;">
+          Predicted by AI model based on your clinical parameters
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clinical Summary -->
+  <div class="charts-grid">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Clinical Parameters</div></div>
+      <div class="card-body" style="padding:0;">
+        <table>
+          <tbody>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Age</td><td><strong>{{ pred.age | int }} years</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Sex</td><td><strong>{{ 'Male' if pred.sex == 1 else 'Female' }}</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Ejection Fraction</td><td><strong>{{ pred.ejection_fraction }}%</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Serum Creatinine</td><td><strong>{{ pred.serum_creatinine }} mg/dL</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Serum Sodium</td><td><strong>{{ pred.serum_sodium }} mEq/L</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Platelets</td><td><strong>{{ pred.platelets | int | string | replace('000', 'k') }}</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">CPK Enzyme</td><td><strong>{{ pred.creatinine_phosphokinase | int }} mcg/L</strong></td></tr>
+            <tr><td style="color:var(--text-muted); font-size:.82rem;">Follow-up Period</td><td><strong>{{ pred.time | int }} days</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Conditions Present</div></div>
+      <div class="card-body">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          {% for label, value in [('Anaemia', pred.anaemia), ('Diabetes', pred.diabetes), ('High Blood Pressure', pred.high_blood_pressure), ('Smoking', pred.smoking)] %}
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg); border-radius:8px;">
+            <span style="font-size:.88rem; font-weight:600;">{{ label }}</span>
+            {% if value %}
+              <span class="badge badge-danger">Yes</span>
+            {% else %}
+              <span class="badge badge-success">No</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if pred.doctor_notes %}
+        <div class="note-box" style="margin-top:16px;">
+          <div class="note-label">Doctor's Note</div>
+          {{ pred.doctor_notes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:12px; margin-top:8px;">
+    <a href="{{ url_for('patient.predict') }}" class="btn btn-primary">+ New Prediction</a>
+    <a href="{{ url_for('patient.dashboard') }}" class="btn btn-outline">← Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Patient Menu</span>
+<a href="{{ url_for('patient.dashboard') }}" class="nav-item active">
+  <span class="nav-icon"></span> Dashboard
+</a>
+<a href="{{ url_for('patient.predict') }}" class="nav-item">
+  <span class="nav-icon"></span> New Prediction
+</a>
+<a href="{{ url_for('patient.profile') }}" class="nav-item">
+  <span class="nav-icon"></span> My Profile
+</a>
+{% endblock %}
+
+{% block page_title %}My Dashboard{% endblock %}
+{% block page_subtitle %}Track your heart health history{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('patient.predict') }}" class="btn btn-primary btn-sm">
+  + New Prediction
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue"></div>
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-label">Total Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-red"></div>
+    <div class="stat-value">{{ high_risk }}</div>
+    <div class="stat-label">High Risk Results</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green"></div>
+    <div class="stat-value">{{ total - high_risk }}</div>
+    <div class="stat-label">Low / Medium Risk</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple"></div>
+    <div class="stat-value">{{ doctors | length }}</div>
+    <div class="stat-label">Assigned Doctors</div>
+  </div>
+</div>
+
+<!-- Latest Result Banner -->
+{% if latest %}
+<div class="card" style="margin-bottom:24px; border-left:4px solid
+  {% if latest.risk_level == 'High' %}#e53e3e
+  {% elif latest.risk_level == 'Medium' %}#ed8936
+  {% else %}#48bb78{% endif %};">
+  <div class="card-body" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div style="font-size:.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px;">Latest Prediction · {{ latest.created_at.strftime('%b %d, %Y') }}</div>
+      <div style="font-size:1.4rem; font-weight:800;">
+        {% if latest.result == 1 %}Risk of Heart Failure Detected{% else %}No Immediate Risk Detected{% endif %}
+      </div>
+      <div style="margin-top:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <span class="badge badge-{{ latest.risk_level | lower }}">{{ latest.risk_level }} Risk</span>
+        <span style="font-size:.85rem; color:var(--text-muted)">Probability: {{ (latest.probability * 100) | round(1) }}%</span>
+      </div>
+      <div class="risk-meter" style="margin-top:12px; max-width:300px;">
+        <div class="risk-bar-bg">
+          <div class="risk-bar risk-{{ latest.risk_level | lower }}" style="width:{{ (latest.probability * 100) | round(1) }}%"></div>
+        </div>
+      </div>
+    </div>
+    {% if latest.doctor_notes %}
+    <div class="note-box" style="max-width:320px;">
+      <div class="note-label">Doctor's Note</div>
+      {{ latest.doctor_notes }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Charts Row -->
+<div class="charts-grid" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Risk Probability Over Time</div>
+        <div class="card-subtitle">Your prediction trend</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Risk Level Distribution</div>
+        <div class="card-subtitle">Breakdown across all predictions</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container" style="height:260px;">
+        <canvas id="riskChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction History Table -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Prediction History</div>
+      <div class="card-subtitle">All your past submissions</div>
+    </div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if predictions %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Age</th>
+            <th>Ejection %</th>
+            <th>Risk Level</th>
+            <th>Probability</th>
+            <th>Result</th>
+            <th>Doctor Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pred in predictions %}
+          <tr>
+            <td style="color:var(--text-muted); font-size:.8rem;">{{ pred.id }}</td>
+            <td>{{ pred.created_at.strftime('%b %d, %Y') }}</td>
+            <td>{{ pred.age | int }}</td>
+            <td>{{ pred.ejection_fraction }}%</td>
+            <td><span class="badge badge-{{ pred.risk_level | lower }}">{{ pred.risk_level }}</span></td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; max-width:80px;">
+                  <div class="risk-bar-bg" style="height:6px;">
+                    <div class="risk-bar risk-{{ pred.risk_level | lower }}" style="width:{{ (pred.probability*100)|round(1) }}%"></div>
+                  </div>
+                </div>
+                <span style="font-size:.82rem;">{{ (pred.probability*100)|round(1) }}%</span>
+              </div>
+            </td>
+            <td>
+              {% if pred.result == 1 %}
+                <span class="badge badge-danger"> At Risk</span>
+              {% else %}
+                <span class="badge badge-success"> Stable</span>
+              {% endif %}
+            </td>
+            <td style="max-width:200px; font-size:.82rem; color:var(--text-muted);">
+              {{ pred.doctor_notes or '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon"></div>
+      <h3>No predictions yet</h3>
+      <p>Submit your first health data to get a prediction.</p>
+      <a href="{{ url_for('patient.predict') }}" class="btn btn-primary" style="margin-top:16px;">Get Prediction</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  const res = await fetch('{{ url_for("patient.history_json") }}');
+  const data = await res.json();
+
+  const labels = data.map(d => d.created_at.split(' ')[0]);
+  const probs  = data.map(d => (d.probability * 100).toFixed(1));
+
+  // Trend Chart
+  const tCtx = document.getElementById('trendChart');
+  if (tCtx && data.length > 0) {
+    new Chart(tCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Risk Probability (%)',
+          data: probs,
+          fill: true,
+          borderColor: '#e53e3e',
+          backgroundColor: 'rgba(229,62,62,.08)',
+          pointBackgroundColor: '#e53e3e',
+          tension: .4,
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,.05)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Risk Donut Chart
+  const rCtx = document.getElementById('riskChart');
+  if (rCtx) {
+    const counts = { Low: 0, Medium: 0, High: 0 };
+    data.forEach(d => counts[d.risk_level]++);
+    new Chart(rCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Low', 'Medium', 'High'],
+        datasets: [{
+          data: [counts.Low, counts.Medium, counts.High],
+          backgroundColor: ['#48bb78', '#ed8936', '#e53e3e'],
+          borderWidth: 0,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '65%',
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
