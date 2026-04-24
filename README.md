@@ -1,13 +1,13 @@
 # Heart Failure Prediction System
 
-A full-stack web application that predicts heart failure risk using machine learning. Built with Flask, SQLAlchemy, and scikit-learn, featuring three role-based dashboards for patients, doctors, and administrators.
+A full-stack web application that predicts heart failure risk from clinical data. Built with Flask, SQLAlchemy, and scikit-learn, featuring three role-based dashboards for patients, doctors, and administrators.
 
 ---
 
 ## Table of Contents
 
 - [Dataset](#dataset)
-- [Machine Learning Pipeline](#machine-learning-pipeline)
+- [Prediction Model Pipeline](#prediction-model-pipeline)
 - [Flask Web Application](#flask-web-application)
 - [Project Structure](#project-structure)
 - [Setup and Installation](#setup-and-installation)
@@ -38,7 +38,7 @@ A full-stack web application that predicts heart failure risk using machine lear
 
 ---
 
-## Machine Learning Pipeline
+## Prediction Model Pipeline
 
 The full pipeline is documented in `notebook/heart_failure_ml.ipynb` and automated in `train_model.py`.
 
@@ -250,7 +250,7 @@ The web app is built with **Flask**, **Flask-SQLAlchemy** (SQLite), and **Flask-
 ```
 heart_failure/
 ├── notebook/
-│   └── heart_failure_ml.ipynb     # Full ML pipeline notebook
+│   └── heart_failure_ml.ipynb     # Full prediction pipeline notebook
 ├── app/
 │   ├── __init__.py                # App factory, extensions
 │   ├── models.py                  # SQLAlchemy models

@@ -32,7 +32,7 @@ os.makedirs(ML_DIR, exist_ok=True)
 
 # ─── 1. Load Data ─────────────────────────────────────────────────────────────
 print("=" * 60)
-print("HEART FAILURE PREDICTION — ML TRAINING")
+print("HEART FAILURE PREDICTION — MODEL TRAINING")
 print("=" * 60)
 
 df = pd.read_csv(DATA_PATH)
